@@ -44,16 +44,29 @@ public class Chip8CPU {
             }
 
             System.out.println("# --- ROM loaded --- #");
-            System.out.println("Current Address" + currentAddress);
-            System.out.println("Loaded Bytes: " + (currentAddress - programCounter));
-            System.out.println("# --- First few bytes --- #");
-            System.out.println(memory[programCounter]);
-            System.out.println(memory[programCounter+1]);
-            System.out.println(memory[programCounter+2]);
-            System.out.println(memory[programCounter+3]);
         } catch (IOException ex) {
             System.err.println("Error streaming ROM: " + ex.getMessage());
         } 
+    }
+
+    private int getInstruction() {
+        int mask = 0xFF;
+        if (programCounter < memory.length-1) {
+            byte b1 = memory[programCounter];
+            byte b2 = memory[programCounter+1];
+            return ((b1 & mask) << 8) | (b2 & mask);
+        }
+        return 0x00;
+    }
+
+    public void execute() {
+        if (memory[ROM_HEAD] == 0) 
+            throw new IllegalStateException("No ROM was loaded !");
+
+        while (programCounter < memory.length-1) {
+            System.out.print(Integer.toHexString(getInstruction()) + " ");
+            programCounter+=2;
+        }
     }
 
 }

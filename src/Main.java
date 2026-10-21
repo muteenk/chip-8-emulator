@@ -7,6 +7,7 @@ public class Main {
 
         }
         cpu.loadROM(args[0]);
+        cpu.execute();
     }
 
 }
