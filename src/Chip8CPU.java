@@ -5,12 +5,12 @@ import java.nio.file.Path;
 
 public class Chip8CPU {
 
-    private static final int MEMORY = 4096;
+    private static final int MEMORY_BYTES = 4096;
     private static final int WIDTH = 64;
     private static final int HEIGHT = 32;
     private static final int ROM_HEAD = 0x200;
 
-    private final byte[] memory = new byte[MEMORY];
+    private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
     private final int[] stack = new int[16];
     private final int[] keyboard = new int[16];
@@ -54,18 +54,53 @@ public class Chip8CPU {
         if (programCounter < memory.length-1) {
             byte b1 = memory[programCounter];
             byte b2 = memory[programCounter+1];
+            programCounter+=2;
             return ((b1 & mask) << 8) | (b2 & mask);
         }
         return 0x00;
+    }
+
+    private void parseInstruction(int opcode) {
+        int type = (opcode & 0xF000) >> 12;
+        int x = (opcode & 0x0F00) >> 8;
+        int y = (opcode & 0x00F0) >> 4;
+        int kk = (opcode & 0x00FF);
+        int nnn = (opcode & 0x0FFF);
+
+        switch (type) {
+            case 0x0:
+                if (kk == 0xE0){
+                    for (int i = 0; i < display.length; i++)
+                        for (int j = 0; j < display[0].length; j++)
+                            display[i][j] = 0;
+                }
+                break;
+            case 0x1:
+                programCounter = nnn;
+                break;
+            case 0x6:
+                registers[x] = (kk & 0xFF);
+                break;
+            case 0x7:
+                registers[x] = (registers[x] + kk) & 0xFF;
+                break;
+            default:
+                break;
+        }
     }
 
     public void execute() {
         if (memory[ROM_HEAD] == 0) 
             throw new IllegalStateException("No ROM was loaded !");
 
+        int cnt = 0;
         while (programCounter < memory.length-1) {
-            System.out.print(Integer.toHexString(getInstruction()) + " ");
-            programCounter+=2;
+            if (cnt > 10) break;
+            int instruction = getInstruction();
+            System.out.println(Integer.toHexString(instruction));
+            System.out.println("Program Counter: " + Integer.toHexString(programCounter));
+            parseInstruction(instruction);
+            cnt++;
         }
     }
 
