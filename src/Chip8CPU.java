@@ -108,8 +108,64 @@ public class Chip8CPU {
             case 0x7:
                 registers[x] = (registers[x] + kk) & 0xFF;
                 break;
+            case 0x8:
+                parseType8Instruction(x, y, nnn);
+                break;
             case 0x9:
                 if (registers[x] != registers[y]) programCounter += 2;
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void parseType8Instruction(int x, int y, int nnn) {
+        int n = (nnn & 0x00F);
+        int result;
+        switch (n) {
+            case 0x0:
+                // COPY
+                registers[x] = registers[y];
+                break;
+            case 0x1:
+                // OR
+                registers[x] = registers[x] | registers[y];
+                break;
+            case 0x2:
+                // AND
+                registers[x] = registers[x] & registers[y];
+                break;
+            case 0x3:
+                // XOR
+                registers[x] = registers[x] ^ registers[y];
+                break;
+            case 0x4:
+                // ADD
+                result = registers[x] + registers[y];
+                registers[15] = (result > 255) ? 1 : 0;
+                registers[x] = (result & 0xFF);
+                break;
+            case 0x5:
+                // SUBTRACT with BORROW checks
+                registers[15] = (registers[x] >= registers[y]) ? 1 : 0;
+                result = registers[x] - registers[y];
+                registers[x] = (result & 0xFF);
+                break;
+            case 0x6:
+                // RIGHT SHIFT
+                registers[15] = registers[x] & 1;
+                registers[x] = ((registers[x] >> 1) & 0xFF);
+                break;
+            case 0x7:
+                // NEGATIVE SUBTRACTION with BORROW checks
+                registers[15] = (registers[y] >= registers[x]) ? 1 : 0;
+                result = registers[y] - registers[x];
+                registers[x] = (result & 0xFF);
+                break;
+            case 0xE:
+                // LEFT SHIFT
+                registers[15] = ((registers[x] & 0x80) != 0) ? 1 : 0;
+                registers[x] = ((registers[x] << 1) & 0xFF);
                 break;
             default:
                 break;
