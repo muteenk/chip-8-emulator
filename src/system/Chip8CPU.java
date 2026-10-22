@@ -1,7 +1,10 @@
+package system;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import utils.Utils;
 
 public class Chip8CPU {
 
@@ -11,11 +14,12 @@ public class Chip8CPU {
     private static final int DISPLAY_HEIGHT = 32;
     private static final int ROM_HEAD = 0x200;
     private static final int FPS = 60;
+    private static final int BYTE_MASK = 0xFF;
 
     private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
     private final int[] stack = new int[STACK_SPACE];
-    private final int[] keyboard = new int[16];
+    private final boolean[] keypad = new boolean[16];
     private final int[][] display = new int[DISPLAY_WIDTH][DISPLAY_HEIGHT];
 
     private int indexRegister = 0;
@@ -52,12 +56,11 @@ public class Chip8CPU {
     }
 
     private int getInstruction() {
-        int mask = 0xFF;
         if (programCounter < memory.length-1) {
             byte b1 = memory[programCounter];
             byte b2 = memory[programCounter+1];
             programCounter+=2;
-            return ((b1 & mask) << 8) | (b2 & mask);
+            return ((b1 & BYTE_MASK) << 8) | (b2 & BYTE_MASK);
         }
         return 0x00;
     }
@@ -103,16 +106,39 @@ public class Chip8CPU {
                 if (registers[x] == registers[y]) programCounter += 2;
                 break;
             case 0x6:
-                registers[x] = (kk & 0xFF);
+                registers[x] = (kk & BYTE_MASK);
                 break;
             case 0x7:
-                registers[x] = (registers[x] + kk) & 0xFF;
+                registers[x] = (registers[x] + kk) & BYTE_MASK;
                 break;
             case 0x8:
                 parseType8Instruction(x, y, nnn);
                 break;
             case 0x9:
                 if (registers[x] != registers[y]) programCounter += 2;
+                break;
+            case 0xA:
+                indexRegister = nnn;
+                break;
+            case 0xB:
+                programCounter = (nnn + registers[0]) & BYTE_MASK;
+                break;
+            case 0xC:
+                int random = Utils.randomInt(0, 255);
+                registers[x] = random & kk;
+                break;
+            case 0xD:
+                break;
+            case 0xE:
+                if (kk == 0x9E) {
+                    if (keypad[registers[x] & 0x0F]) programCounter += 2;
+                }
+                else if (kk == 0xA1) {
+                    if (!keypad[registers[x] & 0x0F]) programCounter += 2;
+                }
+                break;
+            case 0xF:
+                parseTypeFInstruction(x, kk);
                 break;
             default:
                 break;
@@ -143,29 +169,69 @@ public class Chip8CPU {
                 // ADD
                 result = registers[x] + registers[y];
                 registers[15] = (result > 255) ? 1 : 0;
-                registers[x] = (result & 0xFF);
+                registers[x] = (result & BYTE_MASK);
                 break;
             case 0x5:
                 // SUBTRACT with BORROW checks
                 registers[15] = (registers[x] >= registers[y]) ? 1 : 0;
                 result = registers[x] - registers[y];
-                registers[x] = (result & 0xFF);
+                registers[x] = (result & BYTE_MASK);
                 break;
             case 0x6:
                 // RIGHT SHIFT
                 registers[15] = registers[x] & 1;
-                registers[x] = ((registers[x] >> 1) & 0xFF);
+                registers[x] = ((registers[x] >> 1) & BYTE_MASK);
                 break;
             case 0x7:
                 // NEGATIVE SUBTRACTION with BORROW checks
                 registers[15] = (registers[y] >= registers[x]) ? 1 : 0;
                 result = registers[y] - registers[x];
-                registers[x] = (result & 0xFF);
+                registers[x] = (result & BYTE_MASK);
                 break;
             case 0xE:
                 // LEFT SHIFT
                 registers[15] = ((registers[x] & 0x80) != 0) ? 1 : 0;
-                registers[x] = ((registers[x] << 1) & 0xFF);
+                registers[x] = ((registers[x] << 1) & BYTE_MASK);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void parseTypeFInstruction(int x, int kk) {
+        int result;
+        switch (kk) {
+            case 0x07:
+                registers[x] = delayTimer;
+                break;
+            case 0x0A:
+                boolean isKeyPress = false;
+                for (int i = 0; i < keypad.length; i++) {
+                    if (keypad[i]) {
+                        registers[x] = i;
+                        isKeyPress = true;
+                        break;
+                    }
+                }
+                if (!isKeyPress) programCounter -= 2;
+                break;
+            case 0x15:
+                delayTimer = registers[x];
+                break;
+            case 0x18:
+                soundTimer = registers[x];
+                break;
+            case 0x1E:
+                result = indexRegister + registers[x];
+                indexRegister = result & BYTE_MASK;
+                break;
+            case 0x29:
+                break;
+            case 0x33:
+                break;
+            case 0x55:
+                break;
+            case 0x65:
                 break;
             default:
                 break;
