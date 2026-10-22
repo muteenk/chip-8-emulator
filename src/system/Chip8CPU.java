@@ -19,7 +19,7 @@ public class Chip8CPU {
     private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
     private final int[] stack = new int[STACK_SPACE];
-    private final boolean[] keypad = new boolean[16];
+
     private final int[][] display = new int[DISPLAY_WIDTH][DISPLAY_HEIGHT];
 
     private int indexRegister = 0;
@@ -28,6 +28,14 @@ public class Chip8CPU {
     private int delayTimer = 0;
     private int soundTimer = 0;
     private volatile boolean running;
+
+    private final Keypad keypad;
+    private final Screen screen;
+
+    public Chip8CPU(Screen screen, Keypad keypad) {
+        this.keypad = keypad;
+        this.screen = screen;
+    }
 
     
     public void loadROM(String path) {
@@ -131,10 +139,10 @@ public class Chip8CPU {
                 break;
             case 0xE:
                 if (kk == 0x9E) {
-                    if (keypad[registers[x] & 0x0F]) programCounter += 2;
+                    if (keypad.isKeyOn(registers[x] & 0x0F)) programCounter += 2;
                 }
                 else if (kk == 0xA1) {
-                    if (!keypad[registers[x] & 0x0F]) programCounter += 2;
+                    if (!keypad.isKeyOn(registers[x] & 0x0F)) programCounter += 2;
                 }
                 break;
             case 0xF:
@@ -205,15 +213,9 @@ public class Chip8CPU {
                 registers[x] = delayTimer;
                 break;
             case 0x0A:
-                boolean isKeyPress = false;
-                for (int i = 0; i < keypad.length; i++) {
-                    if (keypad[i]) {
-                        registers[x] = i;
-                        isKeyPress = true;
-                        break;
-                    }
-                }
-                if (!isKeyPress) programCounter -= 2;
+                int keyAddr = keypad.getAnyKeyPress();
+                if (keyAddr > -1) registers[x] = keyAddr;
+                else programCounter -= 2;
                 break;
             case 0x15:
                 delayTimer = registers[x];
