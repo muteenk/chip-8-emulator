@@ -6,19 +6,20 @@ import java.nio.file.Path;
 public class Chip8CPU {
 
     private static final int MEMORY_BYTES = 4096;
-    private static final int WIDTH = 64;
-    private static final int HEIGHT = 32;
+    private static final int STACK_SPACE = 16;
+    private static final int DISPLAY_WIDTH = 64;
+    private static final int DISPLAY_HEIGHT = 32;
     private static final int ROM_HEAD = 0x200;
 
     private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
-    private final int[] stack = new int[16];
+    private final int[] stack = new int[STACK_SPACE];
     private final int[] keyboard = new int[16];
-    private final int[][] display = new int[WIDTH][HEIGHT];
+    private final int[][] display = new int[DISPLAY_WIDTH][DISPLAY_HEIGHT];
 
     private int indexRegister = 0;
     private int programCounter = ROM_HEAD;
-    private int stackPointer = 0;
+    private int stackPointer = -1;
     private int fps = 60;
     private int delayTimer = 0;
     private int soundTimer = 0;
@@ -74,9 +75,31 @@ public class Chip8CPU {
                         for (int j = 0; j < display[0].length; j++)
                             display[i][j] = 0;
                 }
+                else if (kk == 0xEE){
+                    if (stackPointer < 0)
+                        throw new IllegalStateException("Tried to return while the call stack is empty !");
+                    programCounter = stack[stackPointer];
+                    stackPointer--;
+                }
                 break;
             case 0x1:
                 programCounter = nnn;
+                break;
+            case 0x2:
+                if (stackPointer + 1 >= STACK_SPACE)
+                    throw new IllegalStateException("The Stack memory has overflown !");
+                stackPointer++;
+                stack[stackPointer] = programCounter;
+                programCounter = nnn;
+                break;
+            case 0x3:
+                if (registers[x] == kk) programCounter += 2;
+                break;
+            case 0x4:
+                if (registers[x] != kk) programCounter += 2;
+                break;
+            case 0x5:
+                if (registers[x] == registers[y]) programCounter += 2;
                 break;
             case 0x6:
                 registers[x] = (kk & 0xFF);
@@ -84,13 +107,16 @@ public class Chip8CPU {
             case 0x7:
                 registers[x] = (registers[x] + kk) & 0xFF;
                 break;
+            case 0x9:
+                if (registers[x] != registers[y]) programCounter += 2;
+                break;
             default:
                 break;
         }
     }
 
     public void execute() {
-        if (memory[ROM_HEAD] == 0) 
+        if (memory[ROM_HEAD] == 0)
             throw new IllegalStateException("No ROM was loaded !");
 
         int cnt = 0;
