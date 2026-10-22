@@ -10,6 +10,7 @@ public class Chip8CPU {
     private static final int DISPLAY_WIDTH = 64;
     private static final int DISPLAY_HEIGHT = 32;
     private static final int ROM_HEAD = 0x200;
+    private static final int FPS = 60;
 
     private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
@@ -20,9 +21,9 @@ public class Chip8CPU {
     private int indexRegister = 0;
     private int programCounter = ROM_HEAD;
     private int stackPointer = -1;
-    private int fps = 60;
     private int delayTimer = 0;
     private int soundTimer = 0;
+    private volatile boolean running;
 
     
     public void loadROM(String path) {
@@ -115,19 +116,36 @@ public class Chip8CPU {
         }
     }
 
-    public void execute() {
+    private void cycle() {
+        int opcode = getInstruction();
+        parseInstruction(opcode);
+    }
+
+    private void tickTimers() {
+        if (delayTimer > 0) delayTimer--;
+        if (soundTimer > 0) soundTimer--;
+    }
+
+    public void execute() throws InterruptedException {
         if (memory[ROM_HEAD] == 0)
             throw new IllegalStateException("No ROM was loaded !");
 
-        int cnt = 0;
-        while (programCounter < memory.length-1) {
-            if (cnt > 10) break;
-            int instruction = getInstruction();
-            System.out.println(Integer.toHexString(instruction));
-            System.out.println("Program Counter: " + Integer.toHexString(programCounter));
-            parseInstruction(instruction);
-            cnt++;
+        long deadline = System.nanoTime();
+        long frame = 1_000_000_000L / FPS;
+        running = true;
+
+        while (running) {
+            for (int i = 0; i < 10; i++) cycle();
+            tickTimers();
+
+            deadline += frame;
+            long remaining = deadline - System.nanoTime();
+            if (remaining > 0) Thread.sleep(remaining / 1_000_000, (int) (remaining % 1_000_000));
         }
+    }
+
+    public void stop() {
+        running = false;
     }
 
 }

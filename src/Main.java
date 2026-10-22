@@ -7,7 +7,12 @@ public class Main {
 
         }
         cpu.loadROM(args[0]);
-        cpu.execute();
+        try {
+            cpu.execute();
+        } catch (InterruptedException ex) {
+            System.out.println("Execution halted: " + ex.getMessage());
+        }
+        
     }
 
 }
