@@ -11,14 +11,15 @@ public class Main {
         Keypad keypad = new Keypad();
         Chip8CPU cpu = new Chip8CPU(screen, keypad);
 
-        if (args.length < 1) {
+        if (args.length < 1)
             throw new IllegalArgumentException("ROM file not provided !");
-
-        }
         cpu.loadROM(args[0]);
+
         SwingUtilities.invokeLater(() -> {
-                screen.renderScreen();
+            screen.initScreen();
+            keypad.setMapKeyStrokes(screen.getCanvas());
         });
+
         try {
             cpu.execute();
         } catch (InterruptedException ex) {

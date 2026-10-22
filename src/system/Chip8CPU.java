@@ -10,8 +10,6 @@ public class Chip8CPU {
 
     private static final int MEMORY_BYTES = 4096;
     private static final int STACK_SPACE = 16;
-    private static final int DISPLAY_WIDTH = 64;
-    private static final int DISPLAY_HEIGHT = 32;
     private static final int ROM_HEAD = 0x200;
     private static final int FPS = 60;
     private static final int BYTE_MASK = 0xFF;
@@ -19,8 +17,6 @@ public class Chip8CPU {
     private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
     private final int[] stack = new int[STACK_SPACE];
-
-    private final int[][] display = new int[DISPLAY_WIDTH][DISPLAY_HEIGHT];
 
     private int indexRegister = 0;
     private int programCounter = ROM_HEAD;
@@ -83,9 +79,7 @@ public class Chip8CPU {
         switch (type) {
             case 0x0:
                 if (kk == 0xE0){
-                    for (int i = 0; i < display.length; i++)
-                        for (int j = 0; j < display[0].length; j++)
-                            display[i][j] = 0;
+                    // screen.clear();
                 }
                 else if (kk == 0xEE){
                     if (stackPointer < 0)
