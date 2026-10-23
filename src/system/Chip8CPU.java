@@ -263,7 +263,7 @@ public class Chip8CPU {
                 break;
             case 0x1E:
                 result = indexRegister + registers[x];
-                indexRegister = result & BYTE_MASK;
+                indexRegister = result;
                 break;
             case 0x29:
                 indexRegister = FONT_START_ADDR + (registers[x] & 0x0F) * 5;
