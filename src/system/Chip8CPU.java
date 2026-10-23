@@ -8,11 +8,47 @@ import utils.Utils;
 
 public class Chip8CPU {
 
+    public static final byte[] FONT_SET = {
+        // 0
+        (byte) 0xF0, (byte) 0x90, (byte) 0x90, (byte) 0x90, (byte) 0xF0,
+        // 1
+        (byte) 0x20, (byte) 0x60, (byte) 0x20, (byte) 0x20, (byte) 0x70,
+        // 2
+        (byte) 0xF0, (byte) 0x10, (byte) 0xF0, (byte) 0x80, (byte) 0xF0,
+        // 3
+        (byte) 0xF0, (byte) 0x10, (byte) 0xF0, (byte) 0x10, (byte) 0xF0,
+        // 4
+        (byte) 0x90, (byte) 0x90, (byte) 0xF0, (byte) 0x10, (byte) 0x10,
+        // 5
+        (byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x10, (byte) 0xF0,
+        // 6
+        (byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x90, (byte) 0xF0,
+        // 7
+        (byte) 0xF0, (byte) 0x10, (byte) 0x20, (byte) 0x40, (byte) 0x40,
+        // 8
+        (byte) 0xF0, (byte) 0x90, (byte) 0xF0, (byte) 0x90, (byte) 0xF0,
+        // 9
+        (byte) 0xF0, (byte) 0x90, (byte) 0xF0, (byte) 0x10, (byte) 0xF0,
+        // A
+        (byte) 0xF0, (byte) 0x90, (byte) 0xF0, (byte) 0x90, (byte) 0x90,
+        // B
+        (byte) 0xE0, (byte) 0x90, (byte) 0xE0, (byte) 0x90, (byte) 0xE0,
+        // C
+        (byte) 0xF0, (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0xF0,
+        // D
+        (byte) 0xE0, (byte) 0x90, (byte) 0x90, (byte) 0x90, (byte) 0xE0,
+        // E
+        (byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x80, (byte) 0xF0,
+        // F
+        (byte) 0xF0, (byte) 0x80, (byte) 0xF0, (byte) 0x80, (byte) 0x80
+    };
+
     private static final int MEMORY_BYTES = 4096;
     private static final int STACK_SPACE = 16;
     private static final int ROM_HEAD = 0x200;
     private static final int FPS = 60;
     private static final int BYTE_MASK = 0xFF;
+    private static final int FONT_START_ADDR = 0x00;
 
     private final byte[] memory = new byte[MEMORY_BYTES];
     private final int[] registers = new int[16];
@@ -31,8 +67,14 @@ public class Chip8CPU {
     public Chip8CPU(Screen screen, Keypad keypad) {
         this.keypad = keypad;
         this.screen = screen;
-    }
 
+        int fontAddr = FONT_START_ADDR;
+        for (int i = 0; i < FONT_SET.length; i++) {
+            memory[fontAddr] = FONT_SET[i];
+            fontAddr++;
+        }
+
+    }
     
     public void loadROM(String path) {
         int currentAddress = ROM_HEAD;
@@ -75,11 +117,12 @@ public class Chip8CPU {
         int y = (opcode & 0x00F0) >> 4;
         int kk = (opcode & 0x00FF);
         int nnn = (opcode & 0x0FFF);
+        int n = (opcode & 0x000F);
 
         switch (type) {
             case 0x0:
                 if (kk == 0xE0){
-                    // screen.clear();
+                    screen.clear();
                 }
                 else if (kk == 0xEE){
                     if (stackPointer < 0)
@@ -114,7 +157,7 @@ public class Chip8CPU {
                 registers[x] = (registers[x] + kk) & BYTE_MASK;
                 break;
             case 0x8:
-                parseType8Instruction(x, y, nnn);
+                parseType8Instruction(x, y, n);
                 break;
             case 0x9:
                 if (registers[x] != registers[y]) programCounter += 2;
@@ -130,6 +173,7 @@ public class Chip8CPU {
                 registers[x] = random & kk;
                 break;
             case 0xD:
+                draw(x, y, n);
                 break;
             case 0xE:
                 if (kk == 0x9E) {
@@ -147,8 +191,7 @@ public class Chip8CPU {
         }
     }
 
-    private void parseType8Instruction(int x, int y, int nnn) {
-        int n = (nnn & 0x00F);
+    private void parseType8Instruction(int x, int y, int n) {
         int result;
         switch (n) {
             case 0x0:
@@ -202,6 +245,7 @@ public class Chip8CPU {
 
     private void parseTypeFInstruction(int x, int kk) {
         int result;
+        int initAddr;
         switch (kk) {
             case 0x07:
                 registers[x] = delayTimer;
@@ -222,16 +266,55 @@ public class Chip8CPU {
                 indexRegister = result & BYTE_MASK;
                 break;
             case 0x29:
+                indexRegister = FONT_START_ADDR + (registers[x] & 0x0F) * 5;
                 break;
             case 0x33:
+                int p100 = (registers[x] / 100);
+                int p10 = ((registers[x] - (p100*100)) / 10);
+                int p1 = (registers[x] - p100 * 100 - p10 * 10);
+                memory[indexRegister] = (byte) p100;
+                memory[indexRegister + 1] = (byte) p10;
+                memory[indexRegister + 2] = (byte) p1;
                 break;
             case 0x55:
+                initAddr = indexRegister;
+                for (int i = 0; i <= x; i++) {
+                    memory[initAddr] = (byte) registers[i];
+                    initAddr++;
+                }
                 break;
             case 0x65:
+                initAddr = indexRegister;
+                for (int i = 0; i <= x; i++) {
+                    registers[i] = memory[initAddr] & BYTE_MASK;
+                    initAddr++;
+                }
                 break;
             default:
                 break;
         }
+    }
+
+    private void draw(int x, int y, int n) {
+        int startX = registers[x];
+        int startY = registers[y];
+        registers[15] = 0;
+
+        for (int row = 0; row < n; row++) {
+            int spriteByte = memory[indexRegister + row];
+            for (int col = 0; col < 8; col++) {
+                int currentBit = spriteByte & (0x80 >> col);
+                if (currentBit != 0) {
+                    int screenX = (startX + col) % 64;
+                    int screenY = (startY + row) % 32;
+
+                    if (screen.getPixel(screenX, screenY) == 1) registers[15] = 1;
+                    screen.xorPixel(screenX, screenY, 1);
+                }
+            }
+        }
+
+        screen.refresh();
     }
 
     private void cycle() {
@@ -255,7 +338,6 @@ public class Chip8CPU {
         while (running) {
             for (int i = 0; i < 10; i++) cycle();
             tickTimers();
-            screen.refresh();
 
             deadline += frame;
             long remaining = deadline - System.nanoTime();

@@ -71,18 +71,29 @@ public class Screen {
         }
     }
 
+    public int getPixel(int x, int y) {
+        return display[y][x];
+    }
+
     public void setPixel(int x, int y) {
-        if (x < 0 || x >= DISPLAY_HEIGHT || y < 0 || y >= DISPLAY_WIDTH) return;
-        display[x][y] = 1;
+        display[y][x] = 1;
     }
 
     public void unsetPixel(int x, int y) {
-        if (x < 0 || x >= DISPLAY_HEIGHT || y < 0 || y >= DISPLAY_WIDTH) return;
-        display[x][y] = 0;
+        display[y][x] = 0;
+    }
+
+    public void xorPixel(int x, int y, int bit) {
+        display[y][x] ^= bit;
     }
 
     public JPanel getCanvas() {
         return displayCanvas;
+    }
+
+    public int setSprite(int[] sprite, int x, int y, int n) {
+
+        return 0;
     }
 
 }
