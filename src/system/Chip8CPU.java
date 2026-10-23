@@ -255,6 +255,7 @@ public class Chip8CPU {
         while (running) {
             for (int i = 0; i < 10; i++) cycle();
             tickTimers();
+            screen.refresh();
 
             deadline += frame;
             long remaining = deadline - System.nanoTime();

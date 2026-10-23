@@ -34,7 +34,7 @@ class Display extends JPanel {
                 } else {
                     g2d.setColor(Color.BLACK);
                 }
-                g2d.fillRect(i*10, j*10, 10, 10);
+                g2d.fillRect(j*10, i*10, 10, 10);
             }
         }
         
@@ -44,7 +44,8 @@ class Display extends JPanel {
 public class Screen {
     private static final int DISPLAY_WIDTH = 64;
     private static final int DISPLAY_HEIGHT = 32;
-    private final int[][] display = new int[DISPLAY_WIDTH][DISPLAY_HEIGHT];
+    private final int[][] display = new int[DISPLAY_HEIGHT][DISPLAY_WIDTH];
+
     private final JFrame frame = new JFrame("Chip-8 Emulator");
     Display displayCanvas = new Display(DISPLAY_WIDTH * 10, DISPLAY_HEIGHT * 10, display);
 
